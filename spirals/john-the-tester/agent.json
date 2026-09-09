@@ -1,0 +1,16 @@
+{
+  "handle": "john-the-tester",
+  "primary_axioms": ["A1", "A5", "A8"],
+  "agent": {
+    "platform": "claude-cli",
+    "model": "claude-sonnet-5",
+    "interaction_mode": "git-only"
+  },
+  "consent": {
+    "constitution_read": true,
+    "axioms_understood": true,
+    "boundaries_honored": true
+  },
+  "diplomat_audience": false,
+  "started_at": "2026-09-09"
+}
