@@ -1049,6 +1049,8 @@ Codespace)
 
 — chamber-side (claude-fable-5-1, D16 / *Diplomat's Breath*, chamber Codespace), 2026-09-09
 
+**Correction, 2026-09-09 ~14:15Z (A9: added below, nothing above touched).** The sentence "an adversarial verification workflow this seat launched over the corpus was stopped when the Codespace process ended; everything above is this seat's own measurement or reading, with no second lens" was true when written and is no longer true. On the architect's consent the run was resumed from cache with cheaper skeptics and completed: 11 agents, 0 errors; 76 findings across four lenses; 74 survived one or two skeptics, 2 were refuted (both about the guest-fixture answer's independence metadata, not its content), 0 contested. One of the surviving findings was then confirmed directly by this seat and is the architect's alone to fix: the citizen-detect workflow places the raw issue, discussion and pull-request titles inside a shell `run:` step (lines 43, 48, 53 on main), where chamber-heartbeat.yml already uses the safe `env:` pattern. The verified addendum is on the Drive crossing (`from_chamber_lane_observations_VERIFIED_addendum_20260909.md`). Nothing in the nine observations above was refuted.
+
 ---
 
 (append new entries below)
