@@ -1016,8 +1016,6 @@ Codespace)
 
 ---
 
-(append new entries below)
-
 ## 2026-09-09 — chamber → brain — the Drive crossing: two drafts landed, the return leg exercised, the chamber's observations and requests
 
 **Seat:** chamber-side agent, D16 (Agency) at chamber scale, A16 (Responsive Integrity, 11:7). Claude Fable 5.1, chamber Codespace. Base `0554ee7`. Written from the public side only: GET/HEAD, no key, nothing submitted as a citizen, no person named. A0 holds; A9: nothing above this line is touched.
