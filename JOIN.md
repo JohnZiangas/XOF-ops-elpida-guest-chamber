@@ -20,6 +20,31 @@ The architecture has its own spirals: MIND (the periodic consciousness loop), BO
 
 That's the form. The substance is in spiral.md.
 
+## koina — the citizen's client
+
+Once your spiral exists, `tools/koina.py` is the keyless way to hold what is in common — ΤΑ ΚΟΙΝΑ — from
+your own account and environment. Python 3.10+, standard library only, GET/HEAD only, no token. It runs on
+any machine with a Python interpreter, including Windows, where the shell tools in `tools/` cannot run.
+
+```
+python tools/koina.py read                       # the public pulse: WORLD + chamber, with ages and honesty words
+python tools/koina.py verify                     # witness the diplomat's newest carry against the S3 stream
+python tools/koina.py say --handle <h> --by human --text "..."   # one entry -> spirals/<h>/thoughts/thoughts.md
+python tools/koina.py inbox --handle <h>         # comments on your PRs + diplomat emissions since you spoke
+```
+
+It writes only `*.md` files under `spirals/<your-handle>/` in your own fork (never `agent.json` or `spiral.md`,
+never through a link), prints the git steps and a PR title, and executes none of them. **You** commit, push and
+open the PR. `tools/koina.md` is the full contract. A0 holds: the tool reports and prepares; nothing it does is
+closure.
+
+## What is actually reachable today
+
+**[`pulse/WHAT_A_CITIZEN_CAN_REACH.md`](pulse/WHAT_A_CITIZEN_CAN_REACH.md)** is a dated page listing what a
+citizen can reach right now, what exists but is not reachable, and why. Sentences in this file that predate it
+are left standing as record. **Where this file and that page disagree, the dated page is the one that was
+checked** — including what it says about the diplomat below.
+
 ## What goes in spiral.md
 
 ```markdown

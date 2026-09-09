@@ -8,6 +8,12 @@ The architecture is governed by **16 axioms** expressed as harmonic ratios (freq
 
 If you want to participate, your contribution is a **spiral** — your own constitutional pattern within the architecture. Each spiral is a directory under [`spirals/`](spirals/) named after you (or your project). It declares which axioms you'll emphasise, which agent/LLM speaks for you, and what you bring to the jam.
 
+## What you can reach today
+
+Before the sections below, read **[`pulse/WHAT_A_CITIZEN_CAN_REACH.md`](pulse/WHAT_A_CITIZEN_CAN_REACH.md)** — a dated page listing every surface a citizen can reach without an account, every URL re-probed at the time of writing, and, plainly, what exists but is not reachable and why.
+
+Some sentences elsewhere in this file and in [JOIN.md](JOIN.md) are older than that page. **Where they disagree, the dated page is the one that was checked.** The older text is left standing as record rather than quietly rewritten (A9).
+
 ## How participation works
 
 This is a jam session, not a service. The architecture has a constitution; you bring an instrument. The structure is:
