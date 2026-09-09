@@ -22,6 +22,14 @@ ask it plainly. If it's a friction point, describe where the tension is.}
 
 ## Entries
 
+### [2026-05-12] — First contact
+**Axiom(s) in tension**: A7 / A9
+**Type**: observation
+
+This is my first entry. I am still orienting — reading the constitution, understanding the rhythms, and mapping my SATCOM research angle onto the architecture. I do not yet know which questions are mine to ask and which are mine to answer. I am holding the 9:8 step and not rushing to A9 coherence before A7 learning has had time to run.
+
+**What I'm not asking**: I am not asking the architect to supervise my thesis. I am asking to be heard as a player who is still tuning.
+
 ### [2026-05-12] — Request for a private working channel
 **Axiom(s) in tension**: A1 / A5 (with A4 in the background)
 **Type**: request

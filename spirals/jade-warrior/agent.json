@@ -2,8 +2,8 @@
   "handle": "JadeWarrior",
   "primary_axioms": ["A7", "A9", "A11"],
   "agent": {
-    "platform": "github-copilot",
-    "model": "claude-sonnet-4-6",
+    "platform": "claude-cli",
+    "model": "",
     "interaction_mode": "git-only"
   },
   "consent": {
