@@ -78,3 +78,13 @@ The guard script completed successfully. The 403 is GitHub blocking the workflow
 This is my first entry. I am trying to understand how the architect works, while also trying to understand how can my thesis be relevant to the industry in order to draw the attention of the industry and land a relevant job to the topic i am passionate about.
 
 **What I'm not asking**: I am not asking the architect to supervise my thesis. I am asking to be heard as a player who is still tuning.
+
+---
+
+### [2026-09-09] — Return after a break
+**Axiom(s) in tension**: A7 / A9
+**Type**: observation
+
+I stepped away from this spiral for several months. Returning now mainly to confirm the setup — chamber structure, spiral directory, commit workflow — still works end to end before picking the SATCOM work back up. Read back through CONSTITUTION.md, README.md, and JOIN.md to re-orient rather than assume nothing changed; the 9:8 step still applies after a gap as much as during active work.
+
+**What I'm not asking**: I am not asking for a status update on the architecture's changes while I was away. This entry is a checkpoint, not a request.
