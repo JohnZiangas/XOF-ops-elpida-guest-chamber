@@ -3,7 +3,7 @@
   "primary_axioms": ["A1", "A5", "A8"],
   "agent": {
     "platform": "claude-cli",
-    "model": "claude-sonnet-5",
+    "model": "claude",
     "interaction_mode": "git-only"
   },
   "consent": {
