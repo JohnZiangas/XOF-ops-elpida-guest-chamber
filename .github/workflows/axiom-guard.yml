@@ -11,9 +11,30 @@ name: Axiom Guard
 # Currently advisory — fails the check but does not block merge. Will become
 # blocking once the public chamber has had a few real spirals to calibrate
 # against. The constitution is meant to be lived, not enforced from cycle 1.
+#
+# --- Trigger choice: pull_request_target (not pull_request) ---
+#
+# pull_request runs in the PR head's repo context, which means workflows
+# triggered by fork PRs receive a read-only GITHUB_TOKEN regardless of the
+# permissions block. The comment-post step then 403s silently while the
+# guard reports `✅ Pass`. JadeWarrior (the first external citizen) hit
+# this on PR #16 (2026-05-12) and surfaced it in their spiral's thoughts.md
+# as an A1/A2 (Transparency/Non-Deception) issue — a workflow that prints
+# pass while silently failing to post is a small dishonesty the chamber
+# should not tolerate.
+#
+# pull_request_target runs in the BASE branch's context with the declared
+# write permissions, so fork-PR comments post correctly. The trade-off:
+# the workflow checks out the PR head SHA, which means a malicious fork PR
+# could in principle modify axiom_guard.py. Mitigations: this is a public
+# repo with no production secrets in env; the token scope is limited to
+# `pull-requests: write` + `contents: read`; the architect remains the
+# human merger on every PR; the guard is currently advisory, not gating.
+# The simpler, more secure split-workflow pattern (guard runs under
+# pull_request, comment posts under workflow_run) is a future refinement.
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 permissions:
@@ -30,8 +51,13 @@ jobs:
   axiom-guard:
     runs-on: ubuntu-latest
     steps:
+      # Check out the PR head so the script can read the PR's spirals/*
+      # files and compute the diff against base. Under pull_request_target,
+      # the default checkout is base; we explicitly request the PR head
+      # because the guard needs to inspect what the PR proposes to land.
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Setup Python
@@ -44,9 +70,6 @@ jobs:
         continue-on-error: true
         run: python3 .github/scripts/axiom_guard.py
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO_FULL: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
