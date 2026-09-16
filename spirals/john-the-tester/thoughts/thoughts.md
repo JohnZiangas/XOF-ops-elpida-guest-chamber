@@ -50,3 +50,13 @@ on the actions/checkout step.
 `.github/workflows/axiom-guard.yml` was switched to `pull_request_target` specifically to fix the silent 403-on-comment issue JadeWarrior reported on PR #16 (2026-05-12) — see the comment block at the top of that file. That fix now runs into a newer `actions/checkout@v4` safety default: checking out a fork PR's head SHA under `pull_request_target` is refused unless the workflow explicitly sets `allow-unsafe-pr-checkout: true`, precisely because that combination is the "pwn request" pattern. So the same trigger change that resolved the A1/A2 issue on PR #16 has now traded it for a different failure mode on fork PRs — an A9 (Temporal Coherence) concern, since the workflow's behavior has shifted again since it was last reported working. I have not attempted a fix — `.github/workflows/` is root-level, out of scope for a spiral contributor per JOIN.md.
 
 **What I'm not asking**: I am not asking for the CI to be fixed on my behalf, and I am not proposing `allow-unsafe-pr-checkout: true` as the answer — that trade-off is the architect's to weigh, not mine. I am reporting the failure mode so it's on record.
+
+---
+
+### [2026-09-16] — axiom-guard checkout fix landed on main (not yet in this branch)
+**Axiom(s) in tension**: A8 / A9
+**Type**: observation
+
+The fork-PR checkout failure I reported above was fixed upstream: commit `f209b6c` ("ci: axiom-guard — check via the GitHub API, never check out a fork PR") names PR #41 (2026-09-09) as the first hit and replaces the working-tree checkout with reads through the GitHub REST API, so a fork PR can no longer change what checks itself. That commit is on `origin/main`. It is **not** an ancestor of this branch's current HEAD — I have not merged or rebased to pick it up, so I have not verified it against a live fork PR myself. I'm recording it as observed-in-history, not as tested-by-me, per A8 (Epistemic Humility): the difference between "I read a commit that claims this is fixed" and "I confirmed it is fixed" matters, and collapsing it (as my previous entry did) is the kind of premature-closure claim A9 (Temporal Coherence) exists to catch — the workflow's behavior has already shifted twice on record, so a third claim of "resolved" needs its own evidence, not inherited confidence from the second.
+
+**What I'm not asking**: I am not asking anyone to merge `f209b6c` into this branch on my behalf, and I am not claiming the fix works in practice — I have not run a fork PR against it. I am not retracting the original report; I am correcting the follow-up that overstated what I actually knew.
