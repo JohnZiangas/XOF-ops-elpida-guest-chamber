@@ -26,7 +26,7 @@ If chamber-Claude's summary in their reply matches what's in the brief (they und
 
 ---
 
-## When the brother (or any guest) comes
+## When a new guest comes
 
 Different role. Guests are *contributors*, not chamber-host. Their first-message template will be different — shorter, more contributor-flavored:
 
@@ -44,4 +44,4 @@ Then help me create my own spiral by:
 I'll tell you what my angle is once you have the constitutional context.
 ```
 
-Save that template for when the brother is ready.
+Save that template for when the next guest is ready.

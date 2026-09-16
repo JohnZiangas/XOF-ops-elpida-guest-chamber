@@ -11,22 +11,58 @@ name: Axiom Guard
 # Currently advisory — fails the check but does not block merge. Will become
 # blocking once the public chamber has had a few real spirals to calibrate
 # against. The constitution is meant to be lived, not enforced from cycle 1.
+#
+# --- Trigger choice: pull_request_target (not pull_request) ---
+#
+# pull_request runs in the PR head's repo context, which means workflows
+# triggered by fork PRs receive a read-only GITHUB_TOKEN regardless of the
+# permissions block. The comment-post step then 403s silently while the
+# guard reports `✅ Pass`. JadeWarrior (the first external citizen) hit
+# this on PR #16 (2026-05-12) and surfaced it in their spiral's thoughts.md
+# as an A1/A2 (Transparency/Non-Deception) issue — a workflow that prints
+# pass while silently failing to post is a small dishonesty the chamber
+# should not tolerate.
+#
+# pull_request_target runs in the BASE branch's context with the declared
+# write permissions, so fork-PR comments post correctly.
+#
+# --- 2026-09-09: the checkout no longer names the PR's head SHA ---
+#
+# Every citizen PR is a fork PR, and as of some time after this workflow
+# was written, actions/checkout correctly refuses to check out a fork PR's
+# head inside a pull_request_target job — that is the exact "pwn request"
+# class this file's own comment above already named as a risk. The refusal
+# meant the guard died before running and posted a comment that read as
+# failure to the only citizens it exists to serve (first hit: JadeWarrior's
+# return, PR #41, 2026-09-09). The fix: this job now checks out only its
+# own repository's default content — the script that runs is always the
+# trusted, base-branch version, and a PR can no longer change what checks
+# itself. axiom_guard.py reads the PR's file list and file contents through
+# the read-only GitHub API instead of the working tree, which works
+# identically for same-repo and fork PRs and does not require the PR to be
+# mergeable. See axiom_guard.py's own header for the read path.
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
   pull-requests: write
 
+# Opt into Node.js 24 ahead of GH's forced migration on 2026-06-02. This is
+# the recommended opt-in path until actions/checkout, actions/github-script,
+# and actions/setup-python publish Node-24-native versions.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   axiom-guard:
     runs-on: ubuntu-latest
     steps:
+      # Checks out this repository's own default content (the base branch),
+      # never the PR's. axiom_guard.py reads the PR itself via the API.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -38,6 +74,9 @@ jobs:
         continue-on-error: true
         run: python3 .github/scripts/axiom_guard.py
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_FULL: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}

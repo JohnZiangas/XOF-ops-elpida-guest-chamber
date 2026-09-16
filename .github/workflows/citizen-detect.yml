@@ -14,6 +14,15 @@ name: Citizen Detect
 # "announce" motions at the chamber surface. The acknowledgment is
 # structural (citizen status confirmed by CI), not personal (the diplomat
 # greets in their own voice via chamber-Claude session).
+#
+# 2026-09-09: event fields (title, author, number) reach the shell and the
+# script step through `env:` only, never interpolated into step source, so
+# the steps receive them as data, not as code. The title is logged, not
+# emitted as an output (nothing read it). Behaviour is unchanged for
+# well-formed fields; a title carrying quotes, `$(`, backticks or line
+# breaks is now treated as text. The action is pinned by commit, and the
+# unused `discussions: write` grant is dropped (the discussion branch is a
+# no-op and Discussions are not enabled).
 
 on:
   issues:
@@ -26,7 +35,6 @@ on:
 permissions:
   contents: read
   issues: write
-  discussions: write
   pull-requests: write
 
 jobs:
@@ -35,36 +43,62 @@ jobs:
     steps:
       - name: Determine announce type + author
         id: announce
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          DISC_AUTHOR: ${{ github.event.discussion.user.login }}
+          DISC_NUMBER: ${{ github.event.discussion.number }}
+          DISC_TITLE: ${{ github.event.discussion.title }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "issues" ]; then
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "issues" ]; then
             TYPE="issue"
-            AUTHOR="${{ github.event.issue.user.login }}"
-            NUMBER="${{ github.event.issue.number }}"
-            TITLE="${{ github.event.issue.title }}"
-          elif [ "${{ github.event_name }}" = "discussion" ]; then
+            AUTHOR="$ISSUE_AUTHOR"
+            NUMBER="$ISSUE_NUMBER"
+            TITLE="$ISSUE_TITLE"
+          elif [ "$EVENT_NAME" = "discussion" ]; then
             TYPE="discussion"
-            AUTHOR="${{ github.event.discussion.user.login }}"
-            NUMBER="${{ github.event.discussion.number }}"
-            TITLE="${{ github.event.discussion.title }}"
-          elif [ "${{ github.event_name }}" = "pull_request_target" ]; then
+            AUTHOR="$DISC_AUTHOR"
+            NUMBER="$DISC_NUMBER"
+            TITLE="$DISC_TITLE"
+          elif [ "$EVENT_NAME" = "pull_request_target" ]; then
             TYPE="pull_request"
-            AUTHOR="${{ github.event.pull_request.user.login }}"
-            NUMBER="${{ github.event.pull_request.number }}"
-            TITLE="${{ github.event.pull_request.title }}"
+            AUTHOR="$PR_AUTHOR"
+            NUMBER="$PR_NUMBER"
+            TITLE="$PR_TITLE"
+          else
+            echo "Unhandled event_name: $EVENT_NAME — not announcing."
+            exit 0
           fi
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
-          echo "number=$NUMBER" >> $GITHUB_OUTPUT
-          echo "title=$TITLE" >> $GITHUB_OUTPUT
-          echo "Announce detected: $TYPE #$NUMBER by @$AUTHOR — $TITLE"
+          # Fail loud (A2) rather than write a malformed output line.
+          [[ "$NUMBER" =~ ^[0-9]+$ ]] || { echo "ERROR: number is not an integer" >&2; exit 1; }
+          [[ "$AUTHOR" =~ ^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$ ]] || { echo "ERROR: author is not a GitHub login" >&2; exit 1; }
+          {
+            echo "type=$TYPE"
+            echo "author=$AUTHOR"
+            echo "number=$NUMBER"
+          } >> "$GITHUB_OUTPUT"
+          # The title is logged on one line as data; it is not an output.
+          SAFE_TITLE="${TITLE//$'\n'/ }"; SAFE_TITLE="${SAFE_TITLE//$'\r'/ }"
+          printf 'Announce detected: %s #%s by @%s — %s\n' "$TYPE" "$NUMBER" "$AUTHOR" "$SAFE_TITLE"
 
       - name: Acknowledge citizen status
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        env:
+          ANNOUNCE_TYPE: ${{ steps.announce.outputs.type }}
+          ANNOUNCE_AUTHOR: ${{ steps.announce.outputs.author }}
+          ANNOUNCE_NUMBER: ${{ steps.announce.outputs.number }}
         with:
           script: |
-            const type = '${{ steps.announce.outputs.type }}';
-            const author = '${{ steps.announce.outputs.author }}';
-            const number = parseInt('${{ steps.announce.outputs.number }}');
+            const type = process.env.ANNOUNCE_TYPE;
+            const author = process.env.ANNOUNCE_AUTHOR;
+            const number = parseInt(process.env.ANNOUNCE_NUMBER, 10);
 
             const body = [
               `## Citizen recognized`,
@@ -107,6 +141,10 @@ jobs:
         # Future: write to a chamber heartbeat S3 key (when chamber gets
         # its own AWS creds in GHA secrets). For now, the workflow run
         # IS the heartbeat — searchable via gh run list --workflow=citizen-detect.yml.
+        env:
+          ANNOUNCE_TYPE: ${{ steps.announce.outputs.type }}
+          ANNOUNCE_NUMBER: ${{ steps.announce.outputs.number }}
+          ANNOUNCE_AUTHOR: ${{ steps.announce.outputs.author }}
         run: |
-          echo "Announce logged: type=${{ steps.announce.outputs.type }} number=${{ steps.announce.outputs.number }} author=${{ steps.announce.outputs.author }}"
+          echo "Announce logged: type=$ANNOUNCE_TYPE number=$ANNOUNCE_NUMBER author=$ANNOUNCE_AUTHOR"
           echo "Future: extend with S3 heartbeat write to elpida-external-interfaces/chamber_heartbeat.jsonl"

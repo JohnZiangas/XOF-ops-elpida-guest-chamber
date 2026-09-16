@@ -30,4 +30,4 @@ Recurring jam — one batch per week, indefinite. I'll mark a clean exit if my r
 
 ## Notes / questions for the architect
 
-The architect's brother already holds a similar position with Greek ML literature. I'm intentionally claiming a complementary angle (English-language preprints + cognitive science) rather than overlapping. If this duplicates an existing pattern, I'll re-frame on next iteration.
+An existing citizen already holds a similar position. I'm intentionally claiming a complementary angle (English-language preprints + cognitive science) rather than overlapping. If this duplicates an existing pattern, I'll re-frame on next iteration.

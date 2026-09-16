@@ -3,9 +3,27 @@
 // Fetches CONSTITUTION.md, JOIN.md, and each spiral's agent.json + spiral.md
 // at runtime. Renders markdown via marked. No build step.
 
-// SPIRALS list is hardcoded; update when a new spiral is added.
-// (axiom-guard does not yet enforce this — see spiral.md.)
-const SPIRALS = ["example", "ui"];
+// SPIRALS list is generated at runtime from the repo's spirals/ directory
+// via GitHub's contents API — per the brain's recommendation in
+// .claude/bridge/from_brain.md (2026-05-08): "let the directory be the
+// truth." Public repo, unauthenticated; GitHub rate-limits unauthenticated
+// requests to 60/hr per IP, and this viewer makes one such call per page
+// load. Filters out `_template/` so the example placeholder doesn't
+// appear as a citizen.
+const SPIRALS_LIST_URL =
+  "https://api.github.com/repos/XOF-ops/XOF-ops-elpida-guest-chamber/contents/spirals";
+
+async function listSpirals() {
+  const r = await fetch(SPIRALS_LIST_URL);
+  if (!r.ok) {
+    throw new Error(`${r.status} ${r.statusText} — could not list spirals/`);
+  }
+  const items = await r.json();
+  return items
+    .filter((x) => x.type === "dir" && x.name !== "_template")
+    .map((x) => x.name)
+    .sort();
+}
 
 // Path from spirals/ui/tool/ back to the repo root.
 const ROOT = "../../../";
@@ -65,8 +83,19 @@ async function loadSpirals() {
   const target = $("#spirals-list");
   target.innerHTML = "";
 
+  let handles;
+  try {
+    handles = await listSpirals();
+  } catch (e) {
+    showError(
+      target,
+      `Could not list spirals via GitHub contents API: ${escapeHtml(String(e.message || e))}`
+    );
+    return;
+  }
+
   const cards = await Promise.all(
-    SPIRALS.map(async (handle) => {
+    handles.map(async (handle) => {
       try {
         const agent = await fetchJson(`${ROOT}spirals/${handle}/agent.json`);
         return { handle, agent, error: null };

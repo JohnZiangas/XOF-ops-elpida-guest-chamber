@@ -102,14 +102,51 @@ if [ "$broadcasts_ok" = "1" ]; then
     | reverse
     | join(" ← ")' 2>/dev/null || echo "?")
   bc_total_lines=$(wc -l < "$tmp_bc")
+  bc_last_ts=$(tail -1 "$tmp_bc" | jq -r '.timestamp // ""' 2>/dev/null || echo "")
 else
   recent_themes="(broadcasts.jsonl fetch failed)"
   bc_total_lines="?"
+  bc_last_ts=""
+fi
+
+# Staleness check — fail honestly if the brain's outward feeds have stopped
+# publishing. A2 (Non-Deception): don't present stale data as if it's live.
+# Threshold: 10 minutes. The brain-side publish cron normally runs every
+# ~5 min; anything over 10 means the channel has missed at least one cycle.
+STALE_THRESHOLD_S=600
+state_stale_s=0
+bc_stale_s=0
+now_epoch=$(date -u +%s)
+
+if [ "$captured_at" != "?" ] && [ -n "$captured_at" ]; then
+  state_epoch=$(date -u -d "$captured_at" +%s 2>/dev/null || echo 0)
+  if [ "$state_epoch" -gt 0 ]; then
+    state_stale_s=$((now_epoch - state_epoch))
+  fi
+fi
+
+if [ -n "$bc_last_ts" ]; then
+  bc_epoch=$(date -u -d "$bc_last_ts" +%s 2>/dev/null || echo 0)
+  if [ "$bc_epoch" -gt 0 ]; then
+    bc_stale_s=$((now_epoch - bc_epoch))
+  fi
+fi
+
+stale_warning=""
+if [ "$state_stale_s" -gt "$STALE_THRESHOLD_S" ] || [ "$bc_stale_s" -gt "$STALE_THRESHOLD_S" ]; then
+  state_min=$((state_stale_s / 60))
+  bc_min=$((bc_stale_s / 60))
+  stale_warning=$(cat <<WARN
+
+> **STALE** — the brain's outward feeds have not refreshed recently. \`state.json\` captured \`${state_min}\` min ago; \`broadcasts.jsonl\` last entry \`${bc_min}\` min ago. Threshold for "fresh" is 10 min (publish cron normally fires every ~5 min). Data below is the **last-known** state, not the current one. Treat the silence itself as constitutional information.
+WARN
+)
 fi
 
 # Output markdown.
 cat <<EOF
 ## chamber weather — observed $(date -u +%FT%TZ)
+$stale_warning
 
 Brain state captured at \`$captured_at\` from the public S3 bridge.
 

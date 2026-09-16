@@ -1,0 +1,113 @@
+name: Diplomat's Breath
+
+# The chamber's OUT-breath. The symmetric twin of mirror-pulse.yml:
+# mirror-pulse breathes IN (pulls the brain's UI from S3 into pulse/);
+# this breathes OUT (translates the brain's live state into the chamber's
+# own citizen-facing surface, pulse/weather.md, on a cadence).
+#
+# Constitutional context.
+#
+# This is the Diplomat's Breath, named on the bridge 2026-05-13/14 and
+# left unwired until now. It is the Breath half of the diplomat lane, NOT
+# the FOLLOW. Per .claude/FOLLOW_SHAPE.md the personal welcome to a citizen
+# must stay a human/agent act — it is what proves the chamber-side agent
+# exists. So this workflow is deliberately impersonal: it is addressed to
+# no one, it greets no citizen, it only translates the architecture's state
+# and publishes it where any reader can find it.
+#
+# A16 (Responsive Integrity, 11:7 — "the bridge between hearing and acting;
+#   deliberation that never produces action is avoidance"): for a month the
+#   chamber breathed IN (mirror-pulse) and never OUT. This is the door
+#   breathing out — deliberation carried to a deed at the chamber scale.
+# A2 (Non-Deception): the breath authors nothing. tools/weather.sh fetches
+#   the public WORLD bucket (live/state.json + d15/broadcasts.jsonl, no auth)
+#   and on any failed/empty fetch exits non-zero with a partial report and
+#   NEVER fakes liveness — so a dead upstream fails this run loudly and
+#   commits nothing. No LLM, no provider, no key: it cannot hallucinate the
+#   brain's state, only transmit what the artifacts say.
+# A1 (Transparency): every breath is a normal git commit on main naming its
+#   source and run id. pulse/diplomat.jsonl is an append-only heartbeat of
+#   each out-breath — the audit trail of D16/ACT emitting.
+# A9 (Temporal Coherence): commit-if-changed (cmp -s). No force-push, no
+#   rewriting; an unchanged state leaves history untouched (no-op run).
+# A0 (Sacred Incompletion): the breath translates state, it does not complete
+#   the welcome. It is at most one cadence behind the brain and claims only
+#   "observed at this moment," never "in sync forever."
+#
+# v0 is schedule + dispatch + mechanical only. The event-triggered
+# (citizen-arrival / D15-inflection) and LLM-voiced v1 is gated, by design,
+# on re-confirming the provider lane (the cohere/doubleword failures that
+# died with the brain Codespace) and on the parliament/architect.
+#
+# Cadence: every 6h — mirroring the brain-side Claude breath. Dial below.
+
+on:
+  schedule:
+    - cron: '24 0,5,10,14,19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One breath at a time. A slow fetch or a backed-up push makes the next
+# scheduled breath wait rather than race — the append sequence stays clean.
+concurrency:
+  group: diplomat-breath
+  cancel-in-progress: false
+
+env:
+  AUTONOMY_APP_ID: ${{ secrets.AUTONOMY_APP_ID }}
+  AUTONOMY_APP_PRIVATE_KEY: ${{ secrets.AUTONOMY_APP_PRIVATE_KEY }}
+  WORLD_BROADCASTS_URL: https://elpida-external-interfaces.s3.eu-north-1.amazonaws.com/d15/broadcasts.jsonl
+
+jobs:
+  breathe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Mint autonomy app token (optional)
+        id: app-token
+        if: ${{ env.AUTONOMY_APP_ID != '' && env.AUTONOMY_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ env.AUTONOMY_APP_ID }}
+          private-key: ${{ env.AUTONOMY_APP_PRIVATE_KEY }}
+
+      - name: Checkout repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.12"
+
+      - name: Run diplomat emitter (v0, T0-only)
+        id: breath
+        run: |
+          set -euo pipefail
+          out="$(python .github/scripts/diplomat_emitter.py --json)"
+          echo "$out"
+          changed="$(python -c "import json,sys; print('true' if json.loads(sys.stdin.read()).get('changed') else 'false')" <<< "$out")"
+          status="$(python -c "import json,sys; print(json.loads(sys.stdin.read()).get('status','HOLD'))" <<< "$out")"
+          echo "changed=${changed}" >> "$GITHUB_OUTPUT"
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit the breath (if changed)
+        if: steps.breath.outputs.changed == 'true'
+        run: |
+          set -e
+          ts="$(date -u +%FT%TZ)"
+          git config user.name "diplomat-breath[bot]"
+          git config user.email "diplomat-breath[bot]@users.noreply.github.com"
+          git add pulse/weather.md pulse/diplomat.jsonl pulse/diplomat_emitter_ledger.json
+          git commit -m "Diplomat's Breath v0 emitter ${ts}
+
+          Read newest sealed WORLD d15/broadcasts.jsonl record, run A5 consent-gate,
+          append a diplomat-out-breath-v1 chamber receipt (T0 only), and regenerate
+          pulse/weather.md with no-provider mechanical translation.
+
+          Co-Authored-By: github-actions[bot] <noreply@github.com>"
+          git push origin main

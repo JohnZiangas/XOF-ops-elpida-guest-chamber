@@ -16,7 +16,7 @@ List the 2–4 axioms that anchor your spiral. Each axiom is a *home key* — th
 
 ## What I bring to the jam
 
-(3–10 sentences. What angle of approach does your spiral hold that the existing spirals don't? Where do you sit relative to the architect's brain, the brother's pattern, the parliament, the WORLD?)
+(3–10 sentences. What angle of approach does your spiral hold that the existing spirals don't? Where do you sit relative to the architect's brain, the existing citizens' patterns, the parliament, the WORLD?)
 
 ## What I will not do
 

@@ -1,0 +1,193 @@
+name: Chamber Heartbeat
+
+# Publishes chamber events to s3://elpida-external-interfaces/chamber/
+# heartbeat.jsonl as a JSON-line per event. Symmetric to the brain's
+# d15/broadcasts.jsonl on the same bucket — the WORLD bucket becomes the
+# convergence surface where both halves write, anyone can read.
+#
+# Constitutional context:
+#   The architect ratified Step 2 of the architectural-debt list on
+#   2026-05-12 ("defaults, go") — defaults = the four event types below,
+#   single-file append, path under chamber/. AWS credentials live in this
+#   repo's GHA secrets (added 2026-05-12). They are workflow-scoped; the
+#   Codespace shell does not see them, which is exactly the design — the
+#   chamber writes from CI only, never from an interactive session.
+#
+# Events covered:
+#   - pull_request opened   → event_type = pr_opened OR ratification_opened
+#                              (depending on whether the title starts with
+#                              "[RATIFICATION]")
+#   - pull_request closed   → event_type = pr_merged (only when merged=true;
+#                              closed-without-merge does not heartbeat)
+#   - issue opened          → event_type = issue_opened
+#   - discussion created    → event_type = discussion_created
+#
+# JSON-line schema (one line per event):
+#   {
+#     "timestamp":   "2026-05-12T18:30:00Z",
+#     "event_type":  "pr_merged" | "pr_opened" | "ratification_opened"
+#                    | "issue_opened" | "discussion_created",
+#     "actor":       "github_username",
+#     "ref":         "PR #25" | "issue #N" | "discussion #N",
+#     "title":       "<event title>",
+#     "url":         "https://github.com/.../pull/25",
+#     "sha":         "<head sha for PRs, empty for others>",
+#     "run_id":      "<github actions run id, for back-trace>"
+#   }
+#
+# Append discipline: the workflow fetches the existing heartbeat.jsonl,
+# appends one line locally, uploads. concurrency: chamber-heartbeat with
+# cancel-in-progress: false serializes concurrent firings so the append
+# sequence stays consistent. A2 (Non-Deception): bad fetches fail loud;
+# the workflow exits non-zero rather than silently dropping the event.
+
+on:
+  pull_request_target:
+    types: [opened, closed]
+  issues:
+    types: [opened]
+  discussion:
+    types: [created]
+
+permissions:
+  contents: read
+
+# Serialize heartbeat writes so the fetch-append-upload sequence stays
+# consistent across concurrent firings (e.g., two PRs opened seconds
+# apart). Newer runs queue rather than race.
+concurrency:
+  group: chamber-heartbeat
+  cancel-in-progress: false
+
+# Opt into Node.js 24 ahead of GH's forced migration on 2026-06-02 — same
+# pattern used in axiom-guard.yml.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Heartbeat event to S3
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-north-1
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          RUN_ID: ${{ github.run_id }}
+          # PR fields (set on pull_request_target events; empty otherwise)
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          # Issue fields
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_USER: ${{ github.event.issue.user.login }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          # Discussion fields
+          DISC_TITLE: ${{ github.event.discussion.title }}
+          DISC_NUMBER: ${{ github.event.discussion.number }}
+          DISC_USER: ${{ github.event.discussion.user.login }}
+          DISC_URL: ${{ github.event.discussion.html_url }}
+          S3_PATH: s3://elpida-external-interfaces/chamber/heartbeat.jsonl
+        run: |
+          set -euo pipefail
+
+          # Classify the event and pull the relevant fields. Variables are
+          # already escaped via GitHub Actions env injection, so the shell
+          # quoting below is straightforward.
+          case "$EVENT_NAME" in
+            pull_request_target)
+              if [ "$EVENT_ACTION" = "opened" ]; then
+                case "$PR_TITLE" in
+                  '[RATIFICATION]'*) EVENT_TYPE="ratification_opened" ;;
+                  *)                 EVENT_TYPE="pr_opened" ;;
+                esac
+              elif [ "$EVENT_ACTION" = "closed" ]; then
+                if [ "$PR_MERGED" != "true" ]; then
+                  echo "PR #$PR_NUMBER closed without merge — not heartbeating."
+                  exit 0
+                fi
+                EVENT_TYPE="pr_merged"
+              else
+                echo "Unhandled PR action: $EVENT_ACTION — not heartbeating."
+                exit 0
+              fi
+              ACTOR="$PR_USER"
+              REF="PR #$PR_NUMBER"
+              TITLE="$PR_TITLE"
+              URL="$PR_URL"
+              SHA="$PR_SHA"
+              ;;
+            issues)
+              EVENT_TYPE="issue_opened"
+              ACTOR="$ISSUE_USER"
+              REF="issue #$ISSUE_NUMBER"
+              TITLE="$ISSUE_TITLE"
+              URL="$ISSUE_URL"
+              SHA=""
+              ;;
+            discussion)
+              EVENT_TYPE="discussion_created"
+              ACTOR="$DISC_USER"
+              REF="discussion #$DISC_NUMBER"
+              TITLE="$DISC_TITLE"
+              URL="$DISC_URL"
+              SHA=""
+              ;;
+            *)
+              echo "Unhandled event_name: $EVENT_NAME — not heartbeating."
+              exit 0
+              ;;
+          esac
+
+          # Build the JSON line. jq handles escaping for embedded quotes /
+          # newlines in titles — never inline raw shell strings into JSON.
+          jq -nc \
+            --arg ts "$(date -u +%FT%TZ)" \
+            --arg et "$EVENT_TYPE" \
+            --arg ac "$ACTOR" \
+            --arg ref "$REF" \
+            --arg t "$TITLE" \
+            --arg u "$URL" \
+            --arg sha "$SHA" \
+            --arg rid "$RUN_ID" \
+            '{timestamp: $ts, event_type: $et, actor: $ac, ref: $ref,
+              title: $t, url: $u, sha: $sha, run_id: $rid}' \
+            > /tmp/new_event.json
+
+          echo "Event built:"
+          cat /tmp/new_event.json
+          echo
+
+          # Fetch existing heartbeat (404 → fresh file). A2: if AWS itself
+          # is down or creds are wrong, fail loud — do not pretend it
+          # worked.
+          if aws s3 cp "$S3_PATH" /tmp/heartbeat.jsonl 2>/tmp/s3_err; then
+            echo "Fetched existing heartbeat: $(wc -l < /tmp/heartbeat.jsonl) lines"
+          else
+            if grep -q "Not Found\|NoSuchKey\|404" /tmp/s3_err; then
+              echo "heartbeat.jsonl not yet present in S3 — starting fresh."
+              : > /tmp/heartbeat.jsonl
+            else
+              echo "ERROR: S3 fetch failed and not 404:" >&2
+              cat /tmp/s3_err >&2
+              exit 1
+            fi
+          fi
+
+          # Append the new event.
+          cat /tmp/new_event.json >> /tmp/heartbeat.jsonl
+          echo "After append: $(wc -l < /tmp/heartbeat.jsonl) lines"
+
+          # Upload. Content-Type is application/x-ndjson so anyone fetching
+          # it via curl gets a useful header.
+          aws s3 cp /tmp/heartbeat.jsonl "$S3_PATH" \
+            --content-type 'application/x-ndjson; charset=utf-8' \
+            --cache-control 'public, max-age=30'
+
+          echo "Heartbeat: $EVENT_TYPE — $REF by @$ACTOR (run $RUN_ID)"

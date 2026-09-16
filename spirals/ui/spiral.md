@@ -81,11 +81,17 @@ python3 -m http.server 8000
 
 ## Notes / questions for the architect
 
-- The list of spirals in [tool/ui.js](tool/ui.js) is hardcoded
-  (`SPIRALS = ["example", "ui"]`). It needs updating when a new spiral
-  is added. The axiom-guard CI does not yet enforce this; a future
-  ratification could extend the guard to verify the array matches the
-  directory contents, or replace the array with a manifest file.
+- ~~The list of spirals in `tool/ui.js` was hardcoded.~~ **Addressed
+  2026-05-12:** the viewer now generates the spirals list at runtime via
+  GitHub's contents API against `spirals/` (filtering `_template/`), per
+  the brain's recommendation in `.claude/bridge/from_brain.md` (*"let
+  the directory be the truth"*). The directory IS the manifest; new
+  citizens appear automatically after their spiral PR merges. The new
+  constraint is GitHub's unauthenticated rate limit (60 requests/hr per
+  IP) — sufficient for a viewer, but worth naming as the replacement
+  bound for the hardcoded-array bound. A0 still holds: the choice of
+  *runtime fetch* over *build-time manifest* is itself a verse, not a
+  resolution.
 - The viewer pulls `marked` (markdown renderer, MIT) from jsDelivr CDN
   at a pinned version. Pulling external code at runtime is a small A1
   compromise (the user's browser fetches code I didn't author); it is
