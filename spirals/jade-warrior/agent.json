@@ -3,7 +3,7 @@
   "primary_axioms": ["A7", "A9", "A11"],
   "agent": {
     "platform": "claude-cli",
-    "model": "",
+    "model": "claude",
     "interaction_mode": "git-only"
   },
   "consent": {
