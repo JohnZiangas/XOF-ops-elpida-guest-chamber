@@ -1,11 +1,5 @@
 [
   {
-    "carried_broadcast_id": "f07509462fa1",
-    "fingerprint": "52ec9f576b52e84c1f705e27c9536137ad8f57fe61870594f93c3042aa571ddd",
-    "timestamp": "2026-10-25T04:57:39Z",
-    "status": "EMIT"
-  },
-  {
     "carried_broadcast_id": "3c5a2e17bdbf",
     "fingerprint": "eeec1a18f473d7489fa2862225ec7f0586d4a2c4c10e979c71843575d8f7612a",
     "timestamp": "2026-10-25T09:55:46Z",
@@ -297,6 +291,12 @@
     "carried_broadcast_id": "12a8a2ce4ab2",
     "fingerprint": "16415a634086c32bd6b38185633ba6d8f226e93289e46f5fb01a05c67411da0e",
     "timestamp": "2026-11-22T07:07:52Z",
+    "status": "EMIT"
+  },
+  {
+    "carried_broadcast_id": "52d3e7a1ab21",
+    "fingerprint": "e62d8f3f9f825123a47a886d3bbce3fac34b567a59e8dd94af24bdff0a97a8d1",
+    "timestamp": "2026-11-22T17:55:10Z",
     "status": "EMIT"
   }
 ]
